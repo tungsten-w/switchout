@@ -2,22 +2,13 @@
 
 Quickly switch external screens between **mirror** and **extend** on Hyprland, Windows+P style: a keybind opens a [Quickshell](https://quickshell.org/) menu, you pick a mode, done. A terminal version (TUI) does the same when no shell is running.
 
-## Modes
+```sh
+curl -fsSL https://raw.githubusercontent.com/tungsten-w/switchout/main/install.sh | bash
+```
 
-| Mode              | What happens                                             |
-| ----------------- | -------------------------------------------------------- |
-| **Mirror**        | External screens show the same thing as the laptop panel |
-| **Extend**        | External screens are extra desktop space                 |
-| **External only** | Only the external screens are on (laptop panel off)      |
-| **Internal only** | Only the laptop panel is on (external screens off)       |
+Then press **`SUPER + D`**.
 
-- The **primary** screen is the laptop panel (`eDP-*`, `LVDS-*`, `DSI-*`), or the focused screen on a desktop.
-- By default a mode applies to **every** external screen (HDMI, DisplayPort, USB-C…). With several of them you can target a single one.
-- Headless / virtual outputs (`HEADLESS-*`, e.g. for VNC) are ignored unless named explicitly.
-- Changes are **runtime only**: your config files are never touched. `switchout reset` (or `hyprctl reload`) goes back to your config.
-- When a screen is extended again after being mirrored or turned off, it goes back to where it was (remembered per physical screen in `~/.local/state/switchout/layouts.json`).
-
-## Supported platform
+## Requirements
 
 - **Arch Linux** (and derivatives, e.g. CachyOS)
 - **Hyprland ≥ 0.55 with the Lua config** (`hyprland.lua`). Changes go through `hyprctl eval 'hl.monitor({...})'`.
@@ -25,13 +16,9 @@ Quickly switch external screens between **mirror** and **extend** on Hyprland, W
 
 ## Install
 
-One command:
-
 ```sh
 curl -fsSL https://raw.githubusercontent.com/tungsten-w/switchout/main/install.sh | bash
 ```
-
-Then press **`SUPER + D`**. That's it.
 
 The script installs what is missing (`rust`, `quickshell`) with pacman, builds `switchout` into `~/.cargo/bin`, and runs `switchout setup`, which adds the keybind to `hyprland.lua`:
 
@@ -40,8 +27,10 @@ The script installs what is missing (`rust`, `quickshell`) with pacman, builds `
 - the bind lives between `-- >>> switchout` / `-- <<< switchout` markers, and nothing else in the file is touched.
 
 ```sh
-curl -fsSL …/install.sh | bash -s -- --key "SUPER + SHIFT + D"   # other key
-curl -fsSL …/install.sh | bash -s -- --uninstall                 # remove everything
+# other key
+curl -fsSL https://raw.githubusercontent.com/tungsten-w/switchout/main/install.sh | bash -s -- --key "SUPER + SHIFT + D"
+# remove everything
+curl -fsSL https://raw.githubusercontent.com/tungsten-w/switchout/main/install.sh | bash -s -- --uninstall
 ```
 
 <details>
@@ -70,6 +59,22 @@ switchout setup                    # or add it yourself:
 ```
 
 </details>
+
+## Modes
+
+| Mode              | What happens                                             |
+| ----------------- | -------------------------------------------------------- |
+| **Mirror**        | External screens show the same thing as the laptop panel |
+| **Extend**        | External screens are extra desktop space                 |
+| **External only** | Only the external screens are on (laptop panel off)      |
+| **Internal only** | Only the laptop panel is on (external screens off)       |
+
+- The **primary** screen is the laptop panel (`eDP-*`, `LVDS-*`, `DSI-*`), or the focused screen on a desktop.
+- By default a mode applies to **every** external screen (HDMI, DisplayPort, USB-C…). With several of them you can target a single one.
+- Headless / virtual outputs (`HEADLESS-*`, e.g. for VNC) are ignored unless named explicitly.
+- Switching is **runtime only**: your monitor config is never rewritten. `switchout reset` (or `hyprctl reload`) goes back to it.
+  The only file switchout edits is `hyprland.lua`, once, to add the keybind (`switchout setup`).
+- When a screen is extended again after being mirrored or turned off, it goes back to where it was (remembered per physical screen in `~/.local/state/switchout/layouts.json`).
 
 ## Usage
 
@@ -141,12 +146,30 @@ Things learned the hard way (see also [Panorama's notes](https://github.com/aras
 
 switchout sits in between: not a layout editor, just the quick "I plugged a screen in, mirror or extend?" switch.
 
+## Project layout
+
+```
+src/main.rs          CLI (clap) + apply-and-verify
+src/hypr.rs          hyprctl: read monitors, eval Lua, reload
+src/plan.rs          modes → hl.monitor rules (+ tests)
+src/state.rs         remembered layouts (~/.local/state/switchout)
+src/tui.rs           terminal menu (ratatui)
+src/menu.rs          opens/closes the Quickshell menu
+src/setup.rs         adds/removes the keybind in hyprland.lua
+quickshell/shell.qml the menu, embedded in the binary at build time
+install.sh           one-command installer
+packaging/PKGBUILD   pacman package (switchout-git)
+```
+
 ## Development
 
 ```sh
-cargo test                                   # plan / Lua generation tests
-SWITCHOUT_BIN=$PWD/target/debug/switchout qs -p ./quickshell
+cargo test                                             # plan / Lua / setup tests
+cargo run -- apply mirror --dry-run                    # see the rules without applying them
+SWITCHOUT_BIN=$PWD/target/debug/switchout qs -p ./quickshell   # iterate on the QML without rebuilding
 ```
+
+`switchout menu` uses the QML embedded at build time, so run `cargo build` after editing `shell.qml`.
 
 To try modes without touching your real screens, use headless outputs:
 
@@ -159,4 +182,12 @@ hyprctl reload                     # drop the test rules
 
 ## Roadmap
 
-To be defined.
+To be defined. Ideas so far:
+
+- Use the Noctalia / system theme colours in the menu
+- Open the menu automatically when a screen is plugged in
+- Put workspaces back where they were after mirroring (Hyprland moves them)
+- Choose left / right when extending, from the Quickshell menu (already in the TUI and CLI)
+- Prebuilt binaries in GitHub releases, so installing does not need Rust
+- Publish `switchout-git` on the AUR
+- Other compositors (Sway, niri…) and distributions
