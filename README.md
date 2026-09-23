@@ -25,28 +25,57 @@ Quickly switch external screens between **mirror** and **extend** on Hyprland, W
 
 ## Install
 
+One command:
+
 ```sh
-sudo pacman -S --needed hyprland rust
-paru -S quickshell          # or noctalia-qs, any Quickshell build works
-
-git clone <repo-url> ~/.config/switchout
-cd ~/.config/switchout
-cargo install --path .      # installs ~/.cargo/bin/switchout
+curl -fsSL https://raw.githubusercontent.com/tungsten-w/switchout/main/install.sh | bash
 ```
 
-Then add a keybind in `~/.config/hypr/hyprland.lua`:
+Then press **`SUPER + D`**. That's it.
 
-```lua
-hl.bind("SUPER + D", hl.dsp.exec_cmd("qs -p ~/.config/switchout/quickshell"))
--- or the terminal version:
--- hl.bind("SUPER + SHIFT + D", hl.dsp.exec_cmd("ghostty -e switchout"))
+The script installs what is missing (`rust`, `quickshell`) with pacman, builds `switchout` into `~/.cargo/bin`, and runs `switchout setup`, which adds the keybind to `hyprland.lua`:
+
+- it refuses a key that is already taken (pick another one with `--key`),
+- it checks the new config with `Hyprland --verify-config` before writing it, and keeps a backup (`hyprland.lua.bak-switchout`),
+- the bind lives between `-- >>> switchout` / `-- <<< switchout` markers, and nothing else in the file is touched.
+
+```sh
+curl -fsSL …/install.sh | bash -s -- --key "SUPER + SHIFT + D"   # other key
+curl -fsSL …/install.sh | bash -s -- --uninstall                 # remove everything
 ```
 
-If `switchout` is not in the `PATH` Hyprland sees, point the menu to it with `SWITCHOUT_BIN=/path/to/switchout`.
+<details>
+<summary>Other ways</summary>
+
+**From a clone**
+
+```sh
+git clone https://github.com/tungsten-w/switchout && cd switchout && ./install.sh
+```
+
+**As a pacman package** (the Quickshell menu is embedded in the binary, so it is a single file)
+
+```sh
+git clone https://github.com/tungsten-w/switchout && cd switchout/packaging
+makepkg -si
+switchout setup        # as your user, adds the keybind
+```
+
+**By hand**
+
+```sh
+cargo install --locked --git https://github.com/tungsten-w/switchout
+switchout setup                    # or add it yourself:
+# hl.bind("SUPER + D", hl.dsp.exec_cmd("switchout menu"))
+```
+
+</details>
 
 ## Usage
 
 ### Quickshell menu
+
+`switchout menu` opens it, and closes it if it is already open (so the keybind toggles it).
 
 | Key                | Action                                   |
 | ------------------ | ---------------------------------------- |
@@ -75,6 +104,9 @@ switchout apply external-only -o HDMI-A-1
 switchout apply internal-only
 switchout apply mirror --dry-run         # print the Lua rules instead of applying them
 switchout reset                          # hyprctl reload
+switchout menu                           # open / close the Quickshell menu
+switchout setup [--key "SUPER + D"]      # add the keybind to hyprland.lua
+switchout setup --remove                 # remove it
 ```
 
 ## How it works
@@ -85,7 +117,7 @@ switchout reset                          # hyprctl reload
  TUI (ratatui) ─────────┘                    └──> hyprctl eval hl.monitor(…) (apply)
 ```
 
-All the logic lives in the Rust binary; the QML menu only draws and calls `switchout status --json` / `switchout apply …`.
+All the logic lives in the Rust binary; the QML menu only draws and calls `switchout status --json` / `switchout apply …`. The QML is embedded in the binary (`include_str!`) and written to `$XDG_RUNTIME_DIR/switchout/` when the menu opens, so there are no files to install besides the binary.
 
 Things learned the hard way (see also [Panorama's notes](https://github.com/arashonfire/panorama)):
 

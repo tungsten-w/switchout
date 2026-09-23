@@ -1,0 +1,44 @@
+# Maintainer: tungsten-w
+pkgname=switchout-git
+pkgver=r1.0000000
+pkgrel=1
+pkgdesc="Windows+P style mirror/extend screen switcher for Hyprland (Quickshell menu + TUI)"
+arch=(x86_64 aarch64)
+url="https://github.com/tungsten-w/switchout"
+license=(unknown)
+depends=(gcc-libs glibc hyprland quickshell)
+makedepends=(cargo git)
+provides=(switchout)
+conflicts=(switchout)
+install=switchout.install
+source=("switchout::git+$url.git")
+sha256sums=(SKIP)
+
+pkgver() {
+    cd switchout
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+    cd switchout
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc --print host-tuple)"
+}
+
+build() {
+    cd switchout
+    export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+    cargo build --frozen --release
+}
+
+check() {
+    cd switchout
+    export RUSTUP_TOOLCHAIN=stable
+    cargo test --frozen
+}
+
+package() {
+    cd switchout
+    install -Dm755 target/release/switchout "$pkgdir/usr/bin/switchout"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/switchout/README.md"
+}

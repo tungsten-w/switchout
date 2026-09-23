@@ -1,0 +1,3 @@
+post_install() {
+    echo ":: Run 'switchout setup' (as your user) to add the SUPER + D keybind to hyprland.lua."
+}

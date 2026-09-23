@@ -1,5 +1,7 @@
 mod hypr;
+mod menu;
 mod plan;
+mod setup;
 mod state;
 mod tui;
 
@@ -46,6 +48,17 @@ enum Cmd {
     Reset,
     /// Interactive terminal menu (default)
     Tui,
+    /// Open the Quickshell menu, or close it if it is open
+    Menu,
+    /// Add the keybind that opens the menu to hyprland.lua
+    Setup {
+        /// Key combination
+        #[arg(long, default_value = "SUPER + D")]
+        key: String,
+        /// Remove the keybind instead
+        #[arg(long, conflicts_with = "key")]
+        remove: bool,
+    },
 }
 
 fn main() {
@@ -74,6 +87,9 @@ fn run(cli: Cli) -> Result<()> {
         }
         Cmd::Reset => hypr::reload(),
         Cmd::Tui => tui::run(),
+        Cmd::Menu => menu::toggle(),
+        Cmd::Setup { remove: true, .. } => setup::remove(),
+        Cmd::Setup { key, .. } => setup::install(&key),
     }
 }
 

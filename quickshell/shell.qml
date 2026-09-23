@@ -1,4 +1,4 @@
-// switchout — Quickshell menu. Run with `qs -p ~/.config/switchout/quickshell`.
+// switchout — Quickshell menu, embedded in the binary and opened with `switchout menu`.
 // All the logic lives in the `switchout` binary; this file only draws and calls it.
 
 import QtQuick
