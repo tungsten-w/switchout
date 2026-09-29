@@ -1,5 +1,6 @@
 //! Adds (or removes) the keybind that opens the menu, in `hyprland.lua`.
 
+use crate::noctalia;
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -155,6 +156,9 @@ pub fn install(key: &str) -> Result<()> {
     }
     new.push_str(&format!("{BEGIN}\nhl.bind(\"{key}\", hl.dsp.exec_cmd(\"{command}\"))\n{END}\n"));
 
+    if noctalia::install().is_some() {
+        println!("Noctalia found: the menu follows its colours (~/.config/noctalia/switchout.toml).");
+    }
     if new == config {
         println!("Already set up: {key} opens the menu.");
         return Ok(());
@@ -166,6 +170,9 @@ pub fn install(key: &str) -> Result<()> {
 }
 
 pub fn remove() -> Result<()> {
+    if noctalia::remove() {
+        println!("Noctalia template removed (~/.config/noctalia/switchout.toml).");
+    }
     let path = config_path()?;
     let config = std::fs::read_to_string(&path).with_context(|| format!("could not read {}", path.display()))?;
     let new = strip_block(&config);

@@ -31,17 +31,50 @@ ShellRoot {
     property string error: ""
     property bool busy: false
 
+    // `switchout menu` passes Noctalia's palette file, font and corner radius
+    // (see src/noctalia.rs); the values below are the fallback theme.
+    FileView {
+        id: colorsFile
+        property bool ready: false
+        path: Quickshell.env("SWITCHOUT_COLORS") ?? ""
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: ready = true
+        JsonAdapter {
+            id: palette
+            property color mPrimary: "#e467e4"
+            property color mOnPrimary: "#0b070b"
+            property color mError: "#fd4663"
+            property color mSurface: "#211c21"
+            property color mOnSurface: "#f3f2f3"
+            property color mSurfaceVariant: "#372f37"
+            property color mOnSurfaceVariant: "#b6afb6"
+            property color mOutline: "#736373"
+        }
+    }
+
+    // On first use Noctalia takes a few seconds to render the palette file.
+    Timer {
+        running: colorsFile.path !== "" && !colorsFile.ready
+        interval: 500
+        repeat: true
+        onTriggered: colorsFile.reload()
+    }
+
     QtObject {
         id: theme
         readonly property color backdrop: "#99000000"
-        readonly property color surface: "#211c21"
-        readonly property color surfaceVariant: "#372f37"
-        readonly property color outline: "#736373"
-        readonly property color text: "#f3f2f3"
-        readonly property color textDim: "#b6afb6"
-        readonly property color accent: "#e467e4"
-        readonly property color accentText: "#0b070b"
-        readonly property color error: "#fd4663"
+        readonly property color surface: palette.mSurface
+        readonly property color surfaceVariant: palette.mSurfaceVariant
+        readonly property color outline: palette.mOutline
+        readonly property color text: palette.mOnSurface
+        readonly property color textDim: palette.mOnSurfaceVariant
+        readonly property color accent: palette.mPrimary
+        readonly property color accentText: palette.mOnPrimary
+        readonly property color error: palette.mError
+        readonly property string font: Quickshell.env("SWITCHOUT_FONT") ?? Qt.application.font.family
+        readonly property real radiusScale: Number(Quickshell.env("SWITCHOUT_RADIUS_SCALE") ?? 1) || 1
     }
 
     function apply(index) {
@@ -107,7 +140,7 @@ ShellRoot {
             anchors.centerIn: parent
             width: content.implicitWidth + 48
             height: content.implicitHeight + 48
-            radius: 20
+            radius: Math.round(20 * theme.radiusScale)
             color: theme.surface
             border.color: theme.surfaceVariant
             border.width: 1
@@ -136,7 +169,7 @@ ShellRoot {
                 anchors.centerIn: parent
                 spacing: 18
 
-                Text {
+                Label {
                     text: "Display mode"
                     color: theme.text
                     font.pixelSize: 20
@@ -157,7 +190,7 @@ ShellRoot {
                             height: 30
                             radius: 15
                             color: active ? theme.accent : theme.surfaceVariant
-                            Text {
+                            Label {
                                 id: chipLabel
                                 anchors.centerIn: parent
                                 text: parent.modelData
@@ -193,7 +226,7 @@ ShellRoot {
                     }
                 }
 
-                Text {
+                Label {
                     Layout.fillWidth: true
                     Layout.maximumWidth: 4 * 170 + 3 * 14
                     text: root.error !== "" ? root.error
@@ -206,6 +239,10 @@ ShellRoot {
                 }
             }
         }
+    }
+
+    component Label: Text {
+        font.family: theme.font
     }
 
     component ModeCard: Rectangle {
@@ -221,7 +258,7 @@ ShellRoot {
 
         width: 170
         height: 170
-        radius: 14
+        radius: Math.round(14 * theme.radiusScale)
         color: selected ? theme.surfaceVariant : "transparent"
         border.color: selected ? theme.accent : theme.surfaceVariant
         border.width: selected ? 2 : 1
@@ -235,7 +272,7 @@ ShellRoot {
             onClicked: modeCard.activated()
         }
 
-        Text {
+        Label {
             anchors { top: parent.top; left: parent.left; margins: 10 }
             text: modeCard.number
             color: theme.outline
@@ -249,7 +286,7 @@ ShellRoot {
             height: 18
             radius: 9
             color: theme.accent
-            Text {
+            Label {
                 id: currentLabel
                 anchors.centerIn: parent
                 text: "current"
@@ -270,14 +307,14 @@ ShellRoot {
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 2
-                Text {
+                Label {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: modeCard.label
                     color: theme.text
                     font.pixelSize: 15
                     font.weight: Font.Medium
                 }
-                Text {
+                Label {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: modeCard.hint
                     color: theme.textDim
@@ -311,7 +348,7 @@ ShellRoot {
         color: on ? theme.accent : "transparent"
         border.color: on ? theme.accent : theme.outline
         border.width: 2
-        Text {
+        Label {
             anchors.centerIn: parent
             text: parent.on ? parent.glyph : ""
             color: theme.accentText

@@ -60,6 +60,50 @@ switchout setup                    # or add it yourself:
 
 </details>
 
+## Update
+
+switchout does not update itself. To get the latest version, run the install command again:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tungsten-w/switchout/main/install.sh | bash
+```
+
+It rebuilds switchout from the latest `main` and replaces the old binary. Your keybind, `hyprland.lua` and remembered layouts are kept. Nothing needs restarting: the next `SUPER + D` opens the new menu.
+
+> [!IMPORTANT]
+> If you installed with another key, pass it again (`… | bash -s -- --key "SUPER + SHIFT + D"`). Otherwise the installer moves the bind back to `SUPER + D`.
+
+To update only the binary, without the installer touching `hyprland.lua`:
+
+```sh
+cargo install --locked --git https://github.com/tungsten-w/switchout
+```
+
+**Which version do I have?**
+
+```sh
+switchout --version
+```
+
+Compare it with the latest [release](https://github.com/tungsten-w/switchout/releases). To be notified when a new one comes out, click **Watch → Custom → Releases** on the GitHub page. To install a specific version instead of the latest `main`, add `--tag`, e.g. `cargo install --locked --git https://github.com/tungsten-w/switchout --tag v0.2.0`.
+
+<details>
+<summary>Updating other installs</summary>
+
+**From a clone**
+
+```sh
+cd switchout && git pull && ./install.sh
+```
+
+**Pacman package**: `switchout-git` always builds the latest `main`, so rebuild it:
+
+```sh
+cd switchout && git pull && cd packaging && makepkg -si
+```
+
+</details>
+
 ## Modes
 
 | Mode              | What happens                                             |
@@ -73,7 +117,7 @@ switchout setup                    # or add it yourself:
 - By default a mode applies to **every** external screen (HDMI, DisplayPort, USB-C…). With several of them you can target a single one.
 - Headless / virtual outputs (`HEADLESS-*`, e.g. for VNC) are ignored unless named explicitly.
 - Switching is **runtime only**: your monitor config is never rewritten. `switchout reset` (or `hyprctl reload`) goes back to it.
-  The only file switchout edits is `hyprland.lua`, once, to add the keybind (`switchout setup`).
+  The only file switchout edits is `hyprland.lua`, once, to add the keybind (`switchout setup`). With Noctalia it also adds its own `~/.config/noctalia/switchout.toml` (see below).
 - When a screen is extended again after being mirrored or turned off, it goes back to where it was (remembered per physical screen in `~/.local/state/switchout/layouts.json`).
 
 ## Usage
@@ -81,6 +125,11 @@ switchout setup                    # or add it yourself:
 ### Quickshell menu
 
 `switchout menu` opens it, and closes it if it is already open (so the keybind toggles it).
+
+With [Noctalia](https://github.com/noctalia-dev/noctalia-shell), the menu uses your Noctalia colours, font and corner radius, and keeps up when the wallpaper, palette or light/dark mode changes. Without Noctalia it uses a built-in dark theme.
+
+- **Noctalia 5**: it keeps its palette in memory, so switchout registers a colour template in `~/.config/noctalia/switchout.toml`. Noctalia then writes the palette to `~/.local/state/switchout/noctalia-colors.json` whenever it changes. The very first time, Noctalia takes a few seconds to render it, and the menu switches colours when it arrives. Font and radius come from `noctalia config export` (`[shell]` `font_family`, `corner_radius_scale`). `switchout setup --remove` deletes the template.
+- **Noctalia 4** (Quickshell-based): read directly from `~/.config/noctalia/colors.json` and `settings.json`.
 
 | Key                | Action                                   |
 | ------------------ | ---------------------------------------- |
@@ -156,6 +205,7 @@ src/state.rs         remembered layouts (~/.local/state/switchout)
 src/tui.rs           terminal menu (ratatui)
 src/menu.rs          opens/closes the Quickshell menu
 src/setup.rs         adds/removes the keybind in hyprland.lua
+src/noctalia.rs      Noctalia colours / font / radius for the menu
 quickshell/shell.qml the menu, embedded in the binary at build time
 install.sh           one-command installer
 packaging/PKGBUILD   pacman package (switchout-git)
@@ -180,11 +230,22 @@ hyprctl output remove HEADLESS-5   # re-enable / unmirror it first
 hyprctl reload                     # drop the test rules
 ```
 
+### Releasing a new version
+
+1. Bump `version` in `Cargo.toml`.
+2. Run `cargo build`. This also updates `Cargo.lock`, which must be committed: installs use `--locked` and fail if it is out of date.
+3. Commit, tag and push:
+   ```sh
+   git commit -am "v0.2.0"
+   git tag v0.2.0
+   git push --follow-tags
+   ```
+4. Publish the release so people watching the repo are notified: `gh release create v0.2.0 --generate-notes`.
+
 ## Roadmap
 
 To be defined. Ideas so far:
 
-- Use the Noctalia / system theme colours in the menu
 - Open the menu automatically when a screen is plugged in
 - Put workspaces back where they were after mirroring (Hyprland moves them)
 - Choose left / right when extending, from the Quickshell menu (already in the TUI and CLI)

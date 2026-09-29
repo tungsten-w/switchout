@@ -1,6 +1,7 @@
 //! Opens the Quickshell menu. The QML is embedded in the binary, so installing
 //! `switchout` is all it takes.
 
+use crate::noctalia;
 use anyhow::{Context, Result, bail};
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
@@ -45,6 +46,18 @@ pub fn toggle() -> Result<()> {
     }
 
     let exe = std::env::current_exe().context("could not find the switchout binary")?;
-    let err = Command::new(&qs).arg("-p").arg(&dir).env("SWITCHOUT_BIN", exe).exec();
+    let mut cmd = Command::new(&qs);
+    cmd.arg("-p").arg(&dir).env("SWITCHOUT_BIN", exe);
+    let theme = noctalia::theme();
+    if let Some(colors) = theme.colors {
+        cmd.env("SWITCHOUT_COLORS", colors);
+    }
+    if let Some(font) = theme.font {
+        cmd.env("SWITCHOUT_FONT", font);
+    }
+    if let Some(scale) = theme.radius_scale {
+        cmd.env("SWITCHOUT_RADIUS_SCALE", scale.to_string());
+    }
+    let err = cmd.exec();
     Err(err).with_context(|| format!("could not run {}", qs.display()))
 }

@@ -1,5 +1,6 @@
 mod hypr;
 mod menu;
+mod noctalia;
 mod plan;
 mod setup;
 mod state;
