@@ -1,4 +1,8 @@
-# switchout
+<p align="center">
+  <img src="img/mascot-lumen.png" alt="Lumen, the switchout mascot" width="160">
+</p>
+
+<h1 align="center">✦ switchout ✦</h1>
 
 Quickly switch external screens between **mirror** and **extend** on Hyprland, Windows+P style: a keybind opens a [Quickshell](https://quickshell.org/) menu, you pick a mode, done. A terminal version (TUI) does the same when no shell is running.
 
@@ -7,6 +11,12 @@ curl -fsSL https://raw.githubusercontent.com/tungsten-w/switchout/main/install.s
 ```
 
 Then press **`SUPER + D`**.
+
+<p align="center">
+  <img src="img/shot.png" alt="The switchout menu: Mirror, Extend, External only and Internal only, in the Noctalia palette" width="800">
+  <br>
+  <sub>The Quickshell menu, following the Noctalia palette</sub>
+</p>
 
 ## Requirements
 
